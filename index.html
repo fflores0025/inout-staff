@@ -1,1 +1,543 @@
-heyy
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="theme-color" content="#07070f"/>
+  <title>InOut Staff · Fichaje</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    :root{
+      --bg:#07070f;--surf:#0d0d1a;--card:#111120;--border:#1c1c2e;
+      --a1:#c8ff00;--a2:#ff3cac;--a3:#00d4ff;
+      --txt:#e6e6f0;--muted:#60607a;--r:16px;
+      --success:#00e676;--danger:#ff1744;--warn:#ffab00;
+    }
+    html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);overflow:hidden;touch-action:manipulation;user-select:none;}
+    .kiosk{display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:560px;margin:0 auto;padding:16px 20px;}
+    .k-header{text-align:center;padding:8px 0 4px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
+    .k-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:19px;flex:1;text-align:center;}
+    .k-logo .dot{color:var(--a1);}
+    .k-logo small{display:block;font-size:10px;font-family:'DM Sans',sans-serif;font-weight:400;color:var(--a3);text-transform:uppercase;letter-spacing:2px;margin-top:1px;}
+    .k-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow-y:auto;padding:8px 0 50px;}
+    .k-status{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-between;padding:5px 16px 7px;font-size:10px;color:var(--muted);background:linear-gradient(to top,var(--bg) 60%,transparent);z-index:10;pointer-events:none;}
+    .dot-live{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--success);margin-right:5px;animation:blink 2s ease-in-out infinite;}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+    .btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:16px 24px;border-radius:var(--r);border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:600;transition:opacity .1s,transform .1s;width:100%;min-height:52px;}
+    .btn:active{transform:scale(.96);opacity:.8;}
+    .btn:disabled{opacity:.4;pointer-events:none;}
+    .btn-p{background:var(--a1);color:#000;}
+    .btn-g{background:transparent;color:var(--muted);border:1px solid var(--border);}
+    .btn-danger{background:rgba(255,23,68,.1);color:var(--danger);border:1px solid rgba(255,23,68,.2);}
+    .btn-success{background:rgba(0,230,118,.1);color:var(--success);border:1px solid rgba(0,230,118,.2);}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:20px;width:100%;}
+    .nfc-ring{width:160px;height:160px;border-radius:50%;border:3px solid var(--border);display:flex;align-items:center;justify-content:center;position:relative;transition:all .3s;margin:0 auto;}
+    .nfc-ring.scanning{border-color:var(--a3);animation:pulse 2s ease-in-out infinite;}
+    .nfc-ring.ok{border-color:var(--success);}
+    .nfc-ring.err{border-color:var(--danger);}
+    @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,212,255,.3)}50%{box-shadow:0 0 0 18px rgba(0,212,255,0)}}
+    .nfc-emoji{font-size:52px;line-height:1;}
+    .form-input{width:100%;padding:14px 16px;background:var(--surf);border:2px solid var(--border);border-radius:12px;color:var(--txt);font-family:'DM Sans',sans-serif;font-size:18px;text-align:center;outline:none;transition:border-color .15s;margin-bottom:12px;-webkit-text-fill-color:var(--txt);}
+    .form-input:focus{border-color:var(--a1);}
+    .pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;max-width:280px;margin:0 auto;}
+    .pin-key{padding:18px;border-radius:14px;background:var(--surf);border:1px solid var(--border);font-family:'Syne',sans-serif;font-size:24px;font-weight:700;cursor:pointer;text-align:center;transition:background .1s;user-select:none;}
+    .pin-key:active{background:rgba(200,255,0,.1);border-color:var(--a1);}
+    .pin-dots{display:flex;gap:14px;justify-content:center;margin:16px 0;}
+    .pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);transition:all .15s;}
+    .pin-dot.filled{background:var(--a1);border-color:var(--a1);}
+    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--card);border:1px solid var(--border);border-radius:100px;padding:12px 22px;font-size:13px;z-index:1000;transition:transform .3s;white-space:nowrap;pointer-events:none;}
+    #toast.show{transform:translateX(-50%) translateY(0);}
+    .result-overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:600;animation:fadeIn .2s ease;gap:12px;padding:24px;}
+    .result-overlay.entrada{background:rgba(0,40,10,.97);}
+    .result-overlay.salida{background:rgba(0,10,30,.97);}
+    .result-overlay.err{background:rgba(40,0,0,.97);}
+    .result-overlay.warn{background:rgba(40,30,0,.97);}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    .tbl-wrap{overflow-x:auto;}
+    table{width:100%;border-collapse:collapse;}
+    thead th{text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);}
+    tbody td{padding:10px;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px;}
+    tbody tr:last-child td{border-bottom:none;}
+    .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;text-transform:uppercase;}
+    .b-green{background:rgba(0,230,118,.12);color:var(--success);}
+    .b-blue{background:rgba(0,212,255,.12);color:var(--a3);}
+    .b-gray{background:rgba(107,107,136,.15);color:var(--muted);}
+    .b-warn{background:rgba(255,171,0,.12);color:var(--warn);}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);z-index:800;align-items:center;justify-content:center;padding:16px;}
+    .modal-overlay.show{display:flex;}
+    .modal-box{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:24px;width:100%;max-width:400px;}
+    .modal-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;margin-bottom:16px;}
+    @media(max-width:480px){.pin-key{padding:16px;font-size:20px;}.nfc-ring{width:130px;height:130px;}.nfc-emoji{font-size:42px;}}
+  </style>
+</head>
+<body>
+<div id="toast"></div>
+<div class="modal-overlay" id="modal-overlay"><div class="modal-box" id="modal-box"></div></div>
+
+<div class="kiosk">
+  <div class="k-header">
+    <div style="width:36px"></div>
+    <div class="k-logo">InOut<span class="dot">.</span><small>Staff · Fichaje</small></div>
+    <div id="admin-btn" onclick="openAdmin()" style="width:36px;height:36px;border-radius:50%;background:var(--surf);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px" title="Admin">⚙️</div>
+  </div>
+  <div class="k-body" id="k-body"></div>
+</div>
+
+<div class="k-status">
+  <span><span class="dot-live"></span>InOut Staff v1.0</span>
+  <span id="k-time">—</span>
+  <span id="k-event-name">Sin evento</span>
+</div>
+
+<script>
+const SB_URL = 'https://raoxkjnwrccoxjcipfpv.supabase.co';
+const SB_KEY = 'sb_publishable__-K1pC4bOJHRf8JQ__OOzg_jqLxlGla';
+const _sb    = supabase.createClient(SB_URL, SB_KEY);
+
+const ADMIN_PIN  = '1234';
+let activeEvent  = null;
+let nfcReader    = null, nfcSupported = false;
+let _lastUID = null, _lastTS = 0;
+
+// ── Utils ──────────────────────────────────────────────────────────────────
+let _toastT = null;
+function toast(msg, ms=2800){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(_toastT); _toastT=setTimeout(()=>t.classList.remove('show'), ms);
+}
+function fmt(n){return(n||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtTime(d){return new Date(d).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});}
+function fmtDate(d){return new Date(d).toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'});}
+function minsToHHMM(mins){const h=Math.floor(mins/60),m=mins%60;return `${h}h ${m.toString().padStart(2,'0')}m`;}
+
+function startClock(){
+  const tick=()=>{const el=document.getElementById('k-time');if(el)el.textContent=new Date().toLocaleTimeString('es-ES');};
+  tick(); setInterval(tick,1000);
+}
+
+function closeModal(){document.getElementById('modal-overlay').classList.remove('show'); document.getElementById('modal-box').innerHTML='';}
+document.getElementById('modal-overlay').addEventListener('click', e=>{if(e.target===document.getElementById('modal-overlay'))closeModal();});
+
+// ── Evento activo ──────────────────────────────────────────────────────────
+const _savedEv = localStorage.getItem('staff_event_id');
+const _savedEvName = localStorage.getItem('staff_event_name');
+if(_savedEv){ activeEvent={id:_savedEv,nombre:_savedEvName}; document.getElementById('k-event-name').textContent=_savedEvName||'—'; }
+
+// ── NFC ────────────────────────────────────────────────────────────────────
+async function initNFC(){
+  if(window.ANDROID_KIOSK){ window.onAndroidNFCScan=(uid)=>{if(uid)onNFCScan(uid.toUpperCase());}; return; }
+  if(!('NDEFReader' in window)) return;
+  nfcSupported=true;
+  try{
+    nfcReader=new NDEFReader();
+    await nfcReader.scan();
+    nfcReader.onreading=ev=>onNFCScan(ev.serialNumber.replace(/:/g,'').toUpperCase());
+  }catch(e){ nfcSupported=false; }
+}
+
+function onNFCScan(uid){
+  const now=Date.now();
+  if(uid===_lastUID && now-_lastTS<3000) return;
+  _lastUID=uid; _lastTS=now;
+  if(navigator.vibrate) navigator.vibrate(80);
+  processCheckin(uid);
+}
+
+// ── PANTALLA IDLE ──────────────────────────────────────────────────────────
+function showIdle(){
+  const body=document.getElementById('k-body');
+  body.innerHTML=`
+    <div style="width:100%;max-width:440px;text-align:center">
+      ${activeEvent
+        ? `<div style="background:rgba(200,255,0,.07);border:1px solid rgba(200,255,0,.15);border-radius:10px;padding:10px 16px;margin-bottom:20px">
+             <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Evento activo</div>
+             <div style="font-family:Syne;font-size:15px;font-weight:700;color:var(--a1)">${activeEvent.nombre}</div>
+           </div>`
+        : `<div style="background:rgba(255,23,68,.07);border:1px solid rgba(255,23,68,.2);border-radius:10px;padding:10px 16px;margin-bottom:20px;cursor:pointer" onclick="openAdmin()">
+             <div style="font-size:13px;color:var(--danger)">⚠️ Sin evento — toca ⚙️ para configurar</div>
+           </div>`
+      }
+
+      <div class="nfc-ring scanning" style="margin-bottom:20px">
+        <span class="nfc-emoji">📡</span>
+      </div>
+
+      <div style="font-family:Syne;font-size:22px;font-weight:700;margin-bottom:6px">Acerca tu tarjeta o pulsera</div>
+      <div style="font-size:14px;color:var(--muted);margin-bottom:24px">Para fichar entrada o salida</div>
+
+      <button class="btn btn-g" style="margin-bottom:10px" onclick="showPINLogin()">🔢 Fichar con PIN</button>
+      ${!nfcSupported?`<div style="font-size:11px;color:var(--warn);margin-top:8px">⚠️ NFC no disponible en este dispositivo</div>`:''}
+    </div>`;
+}
+
+// ── LOGIN CON PIN (alternativa a NFC) ──────────────────────────────────────
+let _pinBuf='';
+function showPINLogin(){
+  _pinBuf='';
+  const body=document.getElementById('k-body');
+  body.innerHTML=`
+    <div style="width:100%;max-width:340px;text-align:center">
+      <div style="font-family:Syne;font-size:18px;font-weight:700;margin-bottom:4px">Introduce tu PIN</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px">Tu PIN personal de empleado</div>
+      <div class="pin-dots">
+        <div class="pin-dot" id="pd0"></div>
+        <div class="pin-dot" id="pd1"></div>
+        <div class="pin-dot" id="pd2"></div>
+        <div class="pin-dot" id="pd3"></div>
+      </div>
+      <div class="pin-pad" style="margin-bottom:14px">
+        ${[1,2,3,4,5,6,7,8,9,'','0','⌫'].map(k=>
+          k===''
+          ?`<div></div>`
+          :`<div class="pin-key" onclick="pinKey('${k}')">${k}</div>`
+        ).join('')}
+      </div>
+      <button class="btn btn-g" style="font-size:13px" onclick="showIdle()">← Volver</button>
+    </div>`;
+}
+
+function pinKey(k){
+  if(k==='⌫'){ _pinBuf=_pinBuf.slice(0,-1); }
+  else if(_pinBuf.length<4){ _pinBuf+=k; }
+  for(let i=0;i<4;i++){const d=document.getElementById('pd'+i);if(d)d.className='pin-dot'+(i<_pinBuf.length?' filled':'');}
+  if(_pinBuf.length===4){
+    setTimeout(()=>processCheckinByPIN(_pinBuf), 150);
+    _pinBuf='';
+  }
+}
+
+// ── PROCESAR FICHAJE POR UID (NFC/RFID) ────────────────────────────────────
+async function processCheckin(uid){
+  showProcessing();
+  try{
+    // Buscar empleado por su staff_uid (tarjeta RFID)
+    const{data:emp}=await _sb.from('empleados')
+      .select('*')
+      .eq('staff_uid', uid)
+      .maybeSingle();
+    if(!emp){ showResultScreen('err','❌','Tarjeta no reconocida','UID: '+uid); return; }
+    await doCheckin(emp);
+  }catch(e){ showResultScreen('err','❌','Error',''+e.message); }
+}
+
+// ── PROCESAR FICHAJE POR PIN ────────────────────────────────────────────────
+async function processCheckinByPIN(pin){
+  showProcessing();
+  try{
+    const{data:emp}=await _sb.from('empleados')
+      .select('*')
+      .eq('staff_pin', pin)
+      .maybeSingle();
+    if(!emp){ 
+      // Shake y volver a mostrar PIN
+      const body=document.getElementById('k-body');
+      showPINLogin();
+      toast('PIN incorrecto'); 
+      return; 
+    }
+    await doCheckin(emp);
+  }catch(e){ showResultScreen('err','❌','Error',''+e.message); }
+}
+
+// ── LÓGICA CENTRAL DE FICHAJE ──────────────────────────────────────────────
+async function doCheckin(emp){
+  const now=new Date();
+  const todayStart=new Date(now); todayStart.setHours(0,0,0,0);
+  // Inicio de semana (lunes 00:00)
+  const weekStart=new Date(now);
+  const day=weekStart.getDay(); const diff=day===0?-6:1-day;
+  weekStart.setDate(weekStart.getDate()+diff); weekStart.setHours(0,0,0,0);
+
+  // Buscar último fichaje abierto (entrada sin salida correspondiente)
+  const{data:lastFichaje}=await _sb.from('staff_checkins')
+    .select('*')
+    .eq('empleado_id', emp.id)
+    .is('salida_at', null)
+    .order('entrada_at',{ascending:false})
+    .limit(1)
+    .maybeSingle();
+
+  if(lastFichaje){
+    // HAY UNA ENTRADA ABIERTA → registrar SALIDA
+    const salidaAt=now.toISOString();
+    const entradaAt=new Date(lastFichaje.entrada_at);
+    const minsTrabajados=Math.round((now-entradaAt)/60000);
+
+    // Detectar cruce de semana: si la entrada fue antes del inicio de semana actual
+    // se cierra con fin_semana flag para el informe
+    const cruzaSemana=entradaAt<weekStart;
+
+    await _sb.from('staff_checkins').update({
+      salida_at:   salidaAt,
+      minutos:     minsTrabajados,
+      cruza_semana: cruzaSemana,
+      event_id:    activeEvent?.id || lastFichaje.event_id,
+    }).eq('id', lastFichaje.id);
+
+    const horas=Math.floor(minsTrabajados/60), mins=minsTrabajados%60;
+    showResultScreen('salida','🔵 SALIDA',emp.nombre,
+      `Tiempo trabajado: ${horas}h ${mins.toString().padStart(2,'0')}m`);
+
+  } else {
+    // NO HAY ENTRADA ABIERTA → registrar ENTRADA
+    await _sb.from('staff_checkins').insert({
+      empleado_id: emp.id,
+      empleado_nombre: emp.nombre,
+      event_id:    activeEvent?.id || null,
+      entrada_at:  now.toISOString(),
+      salida_at:   null,
+      minutos:     null,
+      semana_inicio: weekStart.toISOString(),
+    });
+
+    showResultScreen('entrada','🟢 ENTRADA',emp.nombre,
+      `Entrada registrada a las ${now.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}`);
+  }
+}
+
+function showProcessing(){
+  document.getElementById('k-body').innerHTML=`
+    <div style="text-align:center;padding:40px">
+      <div style="font-size:48px;margin-bottom:12px">⏳</div>
+      <div style="font-family:Syne;font-size:18px;font-weight:700">Procesando…</div>
+    </div>`;
+}
+
+function showResultScreen(type, title, name, sub){
+  if(navigator.vibrate) navigator.vibrate(type==='err'?[200,100,200]:type==='salida'?[100,50,100]:100);
+  const d=document.createElement('div');
+  d.className=`result-overlay ${type}`;
+  const colors={entrada:'var(--success)',salida:'var(--a3)',err:'var(--danger)',warn:'var(--warn)'};
+  d.innerHTML=`
+    <div style="font-size:72px">${title.split(' ')[0]}</div>
+    <div style="font-family:Syne;font-size:28px;font-weight:800;color:${colors[type]||'var(--txt)'};text-align:center">${title}</div>
+    <div style="font-family:Syne;font-size:20px;font-weight:700;color:var(--txt)">${name}</div>
+    <div style="font-size:14px;color:rgba(255,255,255,.5);text-align:center">${sub}</div>
+    <div style="font-size:12px;color:rgba(255,255,255,.3);margin-top:8px">${new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</div>`;
+  d.onclick=()=>{d.remove();showIdle();};
+  document.body.appendChild(d);
+  setTimeout(()=>{d.remove();showIdle();}, 3500);
+}
+
+// ── PANEL ADMIN ─────────────────────────────────────────────────────────────
+let _adminPinBuf='';
+function openAdmin(){
+  _adminPinBuf='';
+  document.getElementById('modal-box').innerHTML=`
+    <div class="modal-title">🔒 PIN de administrador</div>
+    <div class="pin-dots">
+      <div class="pin-dot" id="apd0"></div><div class="pin-dot" id="apd1"></div>
+      <div class="pin-dot" id="apd2"></div><div class="pin-dot" id="apd3"></div>
+    </div>
+    <div class="pin-pad" style="margin-bottom:12px">
+      ${[1,2,3,4,5,6,7,8,9,'','0','⌫'].map(k=>
+        k===''?'<div></div>':`<div class="pin-key" onclick="adminPinKey('${k}')">${k}</div>`
+      ).join('')}
+    </div>
+    <button class="btn btn-g" style="font-size:13px" onclick="closeModal()">Cancelar</button>`;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function adminPinKey(k){
+  if(k==='⌫'){ _adminPinBuf=_adminPinBuf.slice(0,-1); }
+  else if(_adminPinBuf.length<4){ _adminPinBuf+=k; }
+  for(let i=0;i<4;i++){const d=document.getElementById('apd'+i);if(d)d.className='pin-dot'+(i<_adminPinBuf.length?' filled':'');}
+  if(_adminPinBuf.length===4){
+    setTimeout(()=>{
+      if(_adminPinBuf===ADMIN_PIN){ closeModal(); showAdminPanel(); }
+      else{
+        _adminPinBuf='';
+        for(let i=0;i<4;i++){const d=document.getElementById('apd'+i);if(d)d.className='pin-dot';}
+        const box=document.getElementById('modal-box');
+        if(box){box.style.transition='transform .08s';box.style.transform='translateX(8px)';
+          setTimeout(()=>box.style.transform='translateX(-8px)',80);
+          setTimeout(()=>box.style.transform='translateX(0)',160);}
+        toast('PIN incorrecto');
+      }
+    },150);
+  }
+}
+
+async function showAdminPanel(){
+  const body=document.getElementById('k-body');
+  body.innerHTML=`<div style="width:100%;max-width:500px"><div style="font-family:Syne;font-size:20px;font-weight:700;margin-bottom:16px;text-align:center">⚙️ Panel de administración</div><div id="admin-content" style="text-align:center;color:var(--muted);padding:20px">Cargando…</div></div>`;
+  
+  try{
+    // Cargar eventos y turnos activos de hoy
+    const today=new Date(); today.setHours(0,0,0,0);
+    const[{data:evs},{data:activos}]=await Promise.all([
+      _sb.from('events').select('id,nombre,estado').in('estado',['publicado','confirmado','produccion','borrador']).order('fecha_inicio',{ascending:false}).limit(10),
+      _sb.from('staff_checkins').select('*, empleados(nombre,departamento)').is('salida_at',null).gte('entrada_at',today.toISOString())
+    ]);
+
+    const adminHTML=`
+      <!-- Selector evento -->
+      <div class="card" style="margin-bottom:12px;text-align:left">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Evento activo en este kiosco</div>
+        <select id="ev-sel" style="width:100%;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--txt);font-size:14px;outline:none;margin-bottom:10px" onchange="selectEventAdmin(this.value,this.options[this.selectedIndex].text)">
+          <option value="">— Sin evento —</option>
+          ${(evs||[]).map(e=>`<option value="${e.id}" ${activeEvent?.id===e.id?'selected':''}>${e.nombre}</option>`).join('')}
+        </select>
+        <button class="btn btn-p" onclick="navigate('dashboard')">Ir al dashboard →</button>
+      </div>
+
+      <!-- Quién está dentro ahora -->
+      <div class="card" style="margin-bottom:12px;text-align:left">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Trabajando ahora (${(activos||[]).length})</div>
+        ${!(activos||[]).length
+          ? '<div style="color:var(--muted);font-size:13px;text-align:center;padding:10px">Nadie fichado actualmente</div>'
+          : (activos||[]).map(c=>{
+              const desde=Math.round((Date.now()-new Date(c.entrada_at))/60000);
+              return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px">
+                <div><div style="font-weight:500">${c.empleados?.nombre||'—'}</div><div style="font-size:11px;color:var(--muted)">${c.empleados?.departamento||'—'}</div></div>
+                <div style="text-align:right"><div style="color:var(--success);font-weight:600">Desde ${fmtTime(c.entrada_at)}</div><div style="font-size:11px;color:var(--muted)">${minsToHHMM(desde)}</div></div>
+              </div>`;
+            }).join('')
+        }
+      </div>
+
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-g" style="flex:1" onclick="showAdminHistorial()">📋 Historial semana</button>
+        <button class="btn btn-g" style="flex:1" onclick="showAdminInformes()">📊 Informes</button>
+      </div>
+      <button class="btn btn-g" style="margin-top:10px;font-size:13px" onclick="showIdle()">← Volver al fichaje</button>`;
+    
+    document.getElementById('admin-content').innerHTML=adminHTML;
+  }catch(e){
+    document.getElementById('admin-content').innerHTML=`<div style="color:var(--danger)">Error: ${e.message}</div>`;
+  }
+}
+
+function selectEventAdmin(id, nombre){
+  if(!id){ activeEvent=null; localStorage.removeItem('staff_event_id'); localStorage.removeItem('staff_event_name'); document.getElementById('k-event-name').textContent='Sin evento'; return; }
+  activeEvent={id,nombre};
+  localStorage.setItem('staff_event_id',id);
+  localStorage.setItem('staff_event_name',nombre);
+  document.getElementById('k-event-name').textContent=nombre;
+  toast('Evento activo: '+nombre);
+}
+
+async function showAdminHistorial(){
+  const body=document.getElementById('k-body');
+  body.innerHTML=`<div style="width:100%;max-width:500px"><div style="font-family:Syne;font-size:18px;font-weight:700;margin-bottom:14px">📋 Historial semana actual</div><div id="hist-content" style="color:var(--muted);text-align:center;padding:20px">Cargando…</div></div>`;
+  
+  const weekStart=new Date();
+  const day=weekStart.getDay(); const diff=day===0?-6:1-day;
+  weekStart.setDate(weekStart.getDate()+diff); weekStart.setHours(0,0,0,0);
+  
+  const{data:fichs}=await _sb.from('staff_checkins')
+    .select('*, empleados(nombre,departamento,horas_contrato)')
+    .gte('entrada_at',weekStart.toISOString())
+    .order('entrada_at',{ascending:false});
+  
+  if(!fichs||!fichs.length){
+    document.getElementById('hist-content').innerHTML='<div>Sin fichajes esta semana</div>';
+  } else {
+    // Agrupar por empleado
+    const byEmp={};
+    fichs.forEach(f=>{
+      const id=f.empleado_id;
+      if(!byEmp[id]) byEmp[id]={nombre:f.empleados?.nombre||'—',dept:f.empleados?.departamento||'—',horas_contrato:f.empleados?.horas_contrato||40,fichs:[]};
+      byEmp[id].fichs.push(f);
+    });
+    
+    document.getElementById('hist-content').innerHTML=Object.values(byEmp).map(emp=>{
+      const minsTot=emp.fichs.filter(f=>f.minutos).reduce((s,f)=>s+(f.minutos||0),0);
+      const horasContrato=emp.horas_contrato*60; // en minutos
+      const extras=Math.max(0,minsTot-horasContrato);
+      return `<div class="card" style="margin-bottom:10px;text-align:left">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div><div style="font-weight:600">${emp.nombre}</div><div style="font-size:12px;color:var(--muted)">${emp.dept}</div></div>
+          <div style="text-align:right">
+            <div style="font-family:Syne;font-size:18px;font-weight:700;color:${minsTot>horasContrato?'var(--warn)':'var(--a1)'}">${minsToHHMM(minsTot)}</div>
+            ${extras>0?`<div style="font-size:11px;color:var(--warn)">+${minsToHHMM(extras)} extras</div>`:''}
+          </div>
+        </div>
+        ${emp.fichs.slice(0,5).map(f=>`
+          <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-top:1px solid rgba(255,255,255,.04)">
+            <span style="color:var(--muted)">${fmtDate(f.entrada_at)}</span>
+            <span>${fmtTime(f.entrada_at)} → ${f.salida_at?fmtTime(f.salida_at):'<span style="color:var(--success)">Activo</span>'}</span>
+            <span style="color:var(--a1)">${f.minutos?minsToHHMM(f.minutos):'—'}</span>
+          </div>`).join('')}
+      </div>`;
+    }).join('');
+  }
+  
+  document.getElementById('hist-content').insertAdjacentHTML('afterbegin',`<button class="btn btn-g" style="margin-bottom:12px;font-size:13px" onclick="showAdminPanel()">← Volver</button>`);
+}
+
+async function showAdminInformes(){
+  const body=document.getElementById('k-body');
+  body.innerHTML=`<div style="width:100%;max-width:500px;text-align:center">
+    <div style="font-family:Syne;font-size:18px;font-weight:700;margin-bottom:14px">📊 Informes semanales</div>
+    <div id="inf-content" style="color:var(--muted);padding:20px">Cargando…</div>
+  </div>`;
+  
+  // Cargar las últimas 8 semanas de informes
+  const{data:informes}=await _sb.from('staff_weekly_reports')
+    .select('*')
+    .order('semana_inicio',{ascending:false})
+    .limit(8);
+  
+  if(!informes||!informes.length){
+    document.getElementById('inf-content').innerHTML=`
+      <div style="font-size:13px;margin-bottom:16px">No hay informes generados aún.</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6">Los informes se generan automáticamente cada domingo a las 23:59.<br/>También puedes generarlo manualmente:</div>
+      <button class="btn btn-p" style="margin-top:14px" onclick="generateWeeklyReport()">⚡ Generar informe ahora</button>`;
+  } else {
+    document.getElementById('inf-content').innerHTML=informes.map(inf=>`
+      <div class="card" style="margin-bottom:8px;text-align:left">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-weight:600;font-size:14px">Semana del ${fmtDate(inf.semana_inicio)}</div>
+            <div style="font-size:12px;color:var(--muted)">${inf.total_empleados} empleados · ${minsToHHMM(inf.total_minutos)}</div>
+          </div>
+          <span class="badge b-green">✓ Cerrado</span>
+        </div>
+      </div>`).join('');
+    document.getElementById('inf-content').insertAdjacentHTML('beforeend',`<button class="btn btn-g" style="margin-top:10px" onclick="generateWeeklyReport()">⚡ Generar informe ahora</button>`);
+  }
+  
+  document.getElementById('inf-content').insertAdjacentHTML('afterbegin',`<button class="btn btn-g" style="margin-bottom:12px;font-size:13px" onclick="showAdminPanel()">← Volver</button><br/>`);
+}
+
+async function generateWeeklyReport(){
+  const weekStart=new Date();
+  const day=weekStart.getDay(); const diff=day===0?-6:1-day;
+  weekStart.setDate(weekStart.getDate()+diff); weekStart.setHours(0,0,0,0);
+  
+  const{data:fichs}=await _sb.from('staff_checkins')
+    .select('empleado_id,minutos')
+    .gte('entrada_at',weekStart.toISOString())
+    .not('minutos','is',null);
+  
+  if(!fichs||!fichs.length){ toast('Sin datos esta semana'); return; }
+  
+  const emps=new Set(fichs.map(f=>f.empleado_id)).size;
+  const totalMins=fichs.reduce((s,f)=>s+(f.minutos||0),0);
+  
+  const{error}=await _sb.from('staff_weekly_reports').upsert({
+    semana_inicio: weekStart.toISOString(),
+    total_empleados: emps,
+    total_minutos: totalMins,
+    generado_at: new Date().toISOString(),
+  },{onConflict:'semana_inicio'});
+  
+  if(error){ toast('Error: '+error.message); return; }
+  toast(`Informe generado ✓ — ${emps} empleados · ${minsToHHMM(totalMins)}`);
+  showAdminInformes();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+(async function init(){
+  startClock();
+  await initNFC();
+  showIdle();
+})();
+</script>
+</body>
+</html>
